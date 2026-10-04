@@ -1,32 +1,32 @@
 -- ============================================
--- TAB TSGB - FULL TECHS (SparkHub)
+-- TAB TSGB - FULL TECHS (FTKQUIKCIRAHUB)
 -- ============================================
 local tsgbTab = tabContents[3] -- Tab thứ 3 là TSGB
 local y = 5
 
--- Nút load SparkHub (chứa đầy đủ tech bạn cần)
-local loadSparkButton = createButton(tsgbTab, "🔥 LOAD SPARKHUB (FULL TECHS)", y, Color3.fromRGB(200, 100, 50)); y = y + 32
+-- Nút load FTKQUIKCIRAHUB (chứa đầy đủ tech bạn cần)
+local loadFTKButton = createButton(tsgbTab, "🔥 LOAD FTKQUIKCIRAHUB", y, Color3.fromRGB(200, 100, 50)); y = y + 32
 
-loadSparkButton.MouseButton1Click:Connect(function()
-    loadSparkButton.Text = "⏳ ĐANG LOAD..."
-    loadSparkButton.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
+loadFTKButton.MouseButton1Click:Connect(function()
+    loadFTKButton.Text = "⏳ ĐANG LOAD..."
+    loadFTKButton.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
     
     local success, err = pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/ultimatep568/Spark-Hub/refs/heads/main/SparkHub_Loader.lua"))()
     end)
     
     if success then
-        loadSparkButton.Text = "✅ ĐÃ LOAD SPARKHUB"
-        loadSparkButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        print("[Spirit Menu] SparkHub loaded!")
+        loadFTKButton.Text = "✅ ĐÃ LOAD FTKQUIKCIRAHUB"
+        loadFTKButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+        print("[Spirit Menu] FTKQUIKCIRAHUB loaded!")
     else
-        loadSparkButton.Text = "❌ LỖI LOAD"
-        loadSparkButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        loadFTKButton.Text = "❌ LỖI LOAD"
+        loadFTKButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         warn("[Spirit Menu] Load failed: " .. tostring(err))
     end
 end)
 
--- Các nút tech hiển thị (chỉ để tham khảo, không cần code riêng)
+-- Các nút tech hiển thị
 local supaTechButton = createButton(tsgbTab, "SUPA TECH: OFF", y, Color3.fromRGB(200,50,50)); y = y + 32
 local kyotoTechButton = createButton(tsgbTab, "KYOTO TECH: OFF", y, Color3.fromRGB(200,50,50)); y = y + 32
 local twistedTechButton = createButton(tsgbTab, "TWISTED TECH: OFF", y, Color3.fromRGB(200,50,50)); y = y + 32
@@ -36,7 +36,7 @@ local backDashButton = createButton(tsgbTab, "BACK DASH CANCEL: OFF", y, Color3.
 local autoCounterButton = createButton(tsgbTab, "AUTO COUNTER: OFF", y, Color3.fromRGB(200,50,50)); y = y + 32
 local autoBlockButton = createButton(tsgbTab, "AUTO BLOCK: OFF", y, Color3.fromRGB(200,50,50)); y = y + 32
 
--- Nút load KittyWare (script dự phòng có Auto Tech, Auto Counter, M1 Reset)
+-- Nút load KittyWare (script dự phòng)
 local loadKittyButton = createButton(tsgbTab, "🐱 LOAD KITTYWARE (DỰ PHÒNG)", y, Color3.fromRGB(100, 150, 200)); y = y + 32
 
 loadKittyButton.MouseButton1Click:Connect(function()

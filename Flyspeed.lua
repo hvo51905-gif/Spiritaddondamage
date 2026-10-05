@@ -1,9 +1,9 @@
--- ============================================
--- FLY (WASD) + ESP + SPEED - UNIVERSAL SCRIPT
--- Fly: W/A/S/D + Space (up) + Shift (down)
+ítanc-- ============================================
+-- FLY (WASD + JOYSTICK) + ESP + SPEED - UNIVERSAL
+-- Fly: WASD/Joystick + Space (up) + Shift (down)
 -- ESP: Name + Distance
 -- Speed: 1-100 (WalkSpeed)
--- Mobile toggle buttons, error-proof
+-- Mobile joystick for touch control
 -- ============================================
 
 local Players = game:GetService("Players")
@@ -32,6 +32,9 @@ local humanoidRootPart = player.Character and player.Character:FindFirstChild("H
 local espCache = {}
 
 local keysDown = {W=false, A=false, S=false, D=false, Space=false, Shift=false}
+
+-- Joystick direction (mobile)
+local joystickDir = Vector2.zero
 
 -- ============================================
 -- GUI
@@ -91,14 +94,88 @@ pcall(function()
 
     flyBtn = makeBtn("FLY: OFF", 0, Color3.fromRGB(200, 50, 50))
     espBtn = makeBtn("ESP: OFF", 42, Color3.fromRGB(200, 50, 50))
-
     flySpeedUpBtn = makeBtn("FLY SPEED +", 84, Color3.fromRGB(50, 150, 50))
     flySpeedDownBtn = makeBtn("FLY SPEED -", 126, Color3.fromRGB(150, 50, 50))
     flySpeedLabel = makeLabel("Fly Speed: 80", 168, Color3.fromRGB(255, 255, 0))
-
     speedUpBtn = makeBtn("SPEED +", 195, Color3.fromRGB(50, 150, 200))
     speedDownBtn = makeBtn("SPEED -", 237, Color3.fromRGB(100, 50, 150))
     speedLabel = makeLabel("Speed: 16", 279, Color3.fromRGB(100, 255, 255))
+end)
+
+-- ============================================
+-- JOYSTICK (Mobile)
+-- ============================================
+local joystickFrame, joystickKnob
+local joystickActive = false
+local joystickStart = Vector2.zero
+
+pcall(function()
+    -- Outer circle (base)
+    joystickFrame = Instance.new("Frame")
+    joystickFrame.Name = "Joystick"
+    joystickFrame.Size = UDim2.new(0, 140, 0, 140)
+    joystickFrame.Position = UDim2.new(0, 30, 0.6, 0)
+    joystickFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    joystickFrame.BackgroundTransparency = 0.5
+    joystickFrame.BorderSizePixel = 2
+    joystickFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    joystickFrame.Parent = screenGui
+    Instance.new("UICorner", joystickFrame).CornerRadius = UDim.new(1, 0)
+
+    -- Inner knob
+    joystickKnob = Instance.new("Frame")
+    joystickKnob.Size = UDim2.new(0, 60, 0, 60)
+    joystickKnob.Position = UDim2.new(0.5, -30, 0.5, -30)
+    joystickKnob.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+    joystickKnob.BackgroundTransparency = 0.2
+    joystickKnob.BorderSizePixel = 0
+    joystickKnob.Parent = joystickFrame
+    Instance.new("UICorner", joystickKnob).CornerRadius = UDim.new(1, 0)
+
+    -- Reset knob position
+    local function resetKnob()
+        joystickKnob.Position = UDim2.new(0.5, -30, 0.5, -30)
+        joystickDir = Vector2.zero
+    end
+
+    -- Input handling
+    joystickFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            joystickActive = true
+            joystickStart = Vector2.new(input.Position.X, input.Position.Y)
+        end
+    end)
+
+    joystickFrame.InputChanged:Connect(function(input)
+        if joystickActive and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+            local current = Vector2.new(input.Position.X, input.Position.Y)
+            local delta = current - joystickStart
+
+            -- Giới hạn bán kính 50px
+            local maxRadius = 50
+            if delta.Magnitude > maxRadius then
+                delta = delta.Unit * maxRadius
+            end
+
+            joystickKnob.Position = UDim2.new(0.5, -30 + delta.X, 0.5, -30 + delta.Y)
+            joystickDir = delta / maxRadius  -- -1 đến 1
+        end
+    end)
+
+    joystickFrame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            joystickActive = false
+            resetKnob()
+        end
+    end)
+
+    -- Make joystick draggable (move to any position)
+    local dragStart, startPos, draggingJoy = nil, nil, false
+    joystickFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch and input.Position then
+            -- Touch on outer edge = drag joystick
+        end
+    end)
 end)
 
 -- ============================================
@@ -166,13 +243,11 @@ local function createESP(plr)
     if espCache[plr] or not plr.Character then return end
     local head = plr.Character:FindFirstChild("Head") or plr.Character:FindFirstChild("HumanoidRootPart")
     if not head then return end
-
     local billboard = Instance.new("BillboardGui")
     billboard.Size = UDim2.new(0, 200, 0, 50)
     billboard.StudsOffset = Vector3.new(0, 3, 0)
     billboard.AlwaysOnTop = true
     billboard.Parent = head
-
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 1, 0)
     label.BackgroundTransparency = 1
@@ -182,7 +257,6 @@ local function createESP(plr)
     label.TextScaled = true
     label.Font = Enum.Font.GothamBold
     label.Parent = billboard
-
     espCache[plr] = {Billboard = billboard, Label = label}
 end
 
@@ -230,14 +304,12 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ============================================
--- SPEED (WalkSpeed)
+-- SPEED
 -- ============================================
 local function applySpeed()
     pcall(function()
         local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.WalkSpeed = walkSpeed
-        end
+        if hum then hum.WalkSpeed = walkSpeed end
     end)
 end
 
@@ -247,7 +319,6 @@ end
 pcall(function()
     flyBtn.MouseButton1Click:Connect(toggleFly)
     espBtn.MouseButton1Click:Connect(toggleESP)
-
     flySpeedUpBtn.MouseButton1Click:Connect(function()
         flySpeed = math.clamp(flySpeed + flySpeedStep, minFlySpeed, maxFlySpeed)
         flySpeedLabel.Text = "Fly Speed: " .. flySpeed
@@ -256,7 +327,6 @@ pcall(function()
         flySpeed = math.clamp(flySpeed - flySpeedStep, minFlySpeed, maxFlySpeed)
         flySpeedLabel.Text = "Fly Speed: " .. flySpeed
     end)
-
     speedUpBtn.MouseButton1Click:Connect(function()
         walkSpeed = math.clamp(walkSpeed + walkSpeedStep, minWalkSpeed, maxWalkSpeed)
         speedLabel.Text = "Speed: " .. walkSpeed
@@ -282,19 +352,9 @@ pcall(function()
         if key == Enum.KeyCode.D then keysDown.D = true end
         if key == Enum.KeyCode.Space then keysDown.Space = true end
         if key == Enum.KeyCode.LeftShift or key == Enum.KeyCode.RightShift then keysDown.Shift = true end
-
         if key == Enum.KeyCode.F then toggleFly() end
         if key == Enum.KeyCode.G then toggleESP() end
-        if key == Enum.KeyCode.Equals or key == Enum.KeyCode.KeypadPlus then
-            flySpeed = math.clamp(flySpeed + flySpeedStep, minFlySpeed, maxFlySpeed)
-            pcall(function() flySpeedLabel.Text = "Fly Speed: " .. flySpeed end)
-        end
-        if key == Enum.KeyCode.Minus or key == Enum.KeyCode.KeypadMinus then
-            flySpeed = math.clamp(flySpeed - flySpeedStep, minFlySpeed, maxFlySpeed)
-            pcall(function() flySpeedLabel.Text = "Fly Speed: " .. flySpeed end)
-        end
     end)
-
     UserInputService.InputEnded:Connect(function(input)
         local key = input.KeyCode
         if key == Enum.KeyCode.W then keysDown.W = false end
@@ -307,7 +367,7 @@ pcall(function()
 end)
 
 -- ============================================
--- FLY LOOP (WASD)
+-- FLY LOOP (WASD + Joystick)
 -- ============================================
 RunService.Heartbeat:Connect(function()
     if flying and bodyVelocity and bodyGyro and humanoidRootPart then
@@ -317,12 +377,18 @@ RunService.Heartbeat:Connect(function()
         local right = cam.CFrame.RightVector
 
         local move = Vector3.zero
+        -- Keyboard
         if keysDown.W then move = move + forward end
         if keysDown.S then move = move - forward end
         if keysDown.D then move = move + right end
         if keysDown.A then move = move - right end
         if keysDown.Space then move = move + Vector3.new(0, 1, 0) end
         if keysDown.Shift then move = move - Vector3.new(0, 1, 0) end
+
+        -- Joystick (mobile)
+        if joystickDir.Magnitude > 0.1 then
+            move = move + forward * (-joystickDir.Y) + right * joystickDir.X
+        end
 
         if move.Magnitude > 0 then
             bodyVelocity.Velocity = move.Unit * flySpeed
@@ -348,4 +414,4 @@ player.CharacterAdded:Connect(function(newChar)
     end
 end)
 
-print("[FlyEspUI] Loaded. F = Fly, G = ESP, WASD = move, +/- = fly speed, Speed buttons = WalkSpeed 1-100.")
+print("[FlyEspUI] Loaded. F = Fly, G = ESP, WASD = move, Joystick = mobile move.")

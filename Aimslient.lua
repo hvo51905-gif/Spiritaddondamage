@@ -4,6 +4,7 @@
 -- SILENT AIM: bullets snap to enemy Head without moving camera
 -- Range: 20-200 studs (adjustable)
 -- Mobile toggle buttons, error-proof
+-- Stats panel showing live info
 -- ============================================
 
 local Players = game:GetService("Players")
@@ -23,6 +24,9 @@ local minRange = 20
 local maxRange = 200
 local rangeStep = 10
 
+local currentTargetName = "None"
+local currentTargetDist = 0
+
 local function getCamera()
     local cam = Workspace.CurrentCamera
     if cam and cam.Parent then return cam end
@@ -32,7 +36,7 @@ end
 -- ============================================
 -- GUI
 -- ============================================
-local screenGui, notifyLabel, aimLockBtn, silentBtn, fovCircle, rangeLabel
+local screenGui, notifyLabel, aimLockBtn, silentBtn, fovCircle, rangeLabel, statsLabel
 
 pcall(function()
     screenGui = Instance.new("ScreenGui")
@@ -41,6 +45,7 @@ pcall(function()
     screenGui.IgnoreGuiInset = true
     screenGui.Parent = player:WaitForChild("PlayerGui", 10)
 
+    -- Notification
     notifyLabel = Instance.new("TextLabel")
     notifyLabel.Size = UDim2.new(0, 300, 0, 50)
     notifyLabel.Position = UDim2.new(0.5, -150, 0.1, 0)
@@ -103,7 +108,7 @@ pcall(function()
     rangeLabel.Parent = screenGui
     Instance.new("UICorner", rangeLabel).CornerRadius = UDim.new(0, 6)
 
-    -- Range buttons
+    -- Range + button
     local rangeUpBtn = Instance.new("TextButton")
     rangeUpBtn.Size = UDim2.new(0, 60, 0, 30)
     rangeUpBtn.Position = UDim2.new(0, 30, 0.3, 145)
@@ -116,6 +121,7 @@ pcall(function()
     rangeUpBtn.Parent = screenGui
     Instance.new("UICorner", rangeUpBtn).CornerRadius = UDim.new(0, 6)
 
+    -- Range - button
     local rangeDownBtn = Instance.new("TextButton")
     rangeDownBtn.Size = UDim2.new(0, 60, 0, 30)
     rangeDownBtn.Position = UDim2.new(0, 100, 0.3, 145)
@@ -128,6 +134,22 @@ pcall(function()
     rangeDownBtn.Parent = screenGui
     Instance.new("UICorner", rangeDownBtn).CornerRadius = UDim.new(0, 6)
 
+    -- STATS PANEL (new)
+    statsLabel = Instance.new("TextLabel")
+    statsLabel.Size = UDim2.new(0, 140, 0, 110)
+    statsLabel.Position = UDim2.new(0, 30, 0.3, 180)
+    statsLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    statsLabel.BackgroundTransparency = 0.4
+    statsLabel.TextColor3 = Color3.fromRGB(0, 255, 180)
+    statsLabel.Text = "FOV: 80\nRange: 200\nAimLock: OFF\nSilent: OFF\nTarget: None\nDist: 0"
+    statsLabel.TextScaled = true
+    statsLabel.Font = Enum.Font.Code
+    statsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statsLabel.TextYAlignment = Enum.TextYAlignment.Top
+    statsLabel.Parent = screenGui
+    Instance.new("UICorner", statsLabel).CornerRadius = UDim.new(0, 6)
+
+    -- Range button events
     rangeUpBtn.MouseButton1Click:Connect(function()
         aimRange = math.clamp(aimRange + rangeStep, minRange, maxRange)
         rangeLabel.Text = "Range: " .. aimRange
@@ -136,6 +158,32 @@ pcall(function()
         aimRange = math.clamp(aimRange - rangeStep, minRange, maxRange)
         rangeLabel.Text = "Range: " .. aimRange
     end)
+end)
+
+-- ============================================
+-- UPDATE STATS PANEL
+-- ============================================
+local function updateStats()
+    pcall(function()
+        if statsLabel and statsLabel.Parent then
+            statsLabel.Text = string.format(
+                "FOV: %d\nRange: %d\nAimLock: %s\nSilent: %s\nTarget: %s\nDist: %dm",
+                fovRadius,
+                aimRange,
+                aimLockEnabled and "ON" or "OFF",
+                silentAimEnabled and "ON" or "OFF",
+                currentTargetName,
+                math.floor(currentTargetDist)
+            )
+        end
+    end)
+end
+
+-- Auto-update stats every 0.25s
+task.spawn(function()
+    while task.wait(0.25) do
+        updateStats()
+    end
 end)
 
 -- ============================================
@@ -200,6 +248,7 @@ local function toggleAimLock()
     if aimLockEnabled then
         showNotification("Aim Lock: ON")
     end
+    updateStats()
 end
 
 local function toggleSilentAim()
@@ -213,6 +262,7 @@ local function toggleSilentAim()
     if silentAimEnabled then
         showNotification("Silent Aim: ON")
     end
+    updateStats()
 end
 
 pcall(function()
@@ -228,6 +278,7 @@ local function getClosestHead()
     if not cam then return nil end
 
     local closestHead = nil
+    local closestPlayer = nil
     local shortestDist = fovRadius
     local screenCenter = cam.ViewportSize / 2
 
@@ -256,6 +307,7 @@ local function getClosestHead()
                         if distToCenter <= fovRadius and distToCenter < shortestDist then
                             shortestDist = distToCenter
                             closestHead = head
+                            closestPlayer = otherPlayer
                         end
                     end
                 end
@@ -263,11 +315,20 @@ local function getClosestHead()
         end)
     end
 
+    -- Update stats with current target
+    if closestHead and closestPlayer and myRoot then
+        currentTargetName = closestPlayer.Name
+        currentTargetDist = (closestHead.Position - myRoot.Position).Magnitude
+    else
+        currentTargetName = "None"
+        currentTargetDist = 0
+    end
+
     return closestHead
 end
 
 -- ============================================
--- AIM LOCK (camera locks onto Head)
+-- AIM LOCK
 -- ============================================
 local function aimLockStep()
     if not aimLockEnabled then return end
@@ -287,7 +348,7 @@ pcall(function()
 end)
 
 -- ============================================
--- SILENT AIM (bullets snap to Head, camera stays)
+-- SILENT AIM
 -- ============================================
 local oldNamecall
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
@@ -349,4 +410,4 @@ pcall(function()
     end)
 end)
 
-print("[AimUI] AIM LOCK + SILENT AIM loaded. F = Aim Lock, G = Silent Aim.")
+print("[AimUI] AIM LOCK + SILENT AIM + STATS loaded. F = Aim Lock, G = Silent Aim.")
